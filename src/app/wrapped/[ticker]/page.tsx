@@ -6,6 +6,45 @@ import { notFound } from "next/navigation";
 import { getCompany } from "@/data/companies";
 import { buildWrappedData } from "@/lib/wrapped-builder";
 import WrappedClient from "./WrappedClient";
+import { WrappedData } from "@/types/wrapped";
+
+// Import enriched data for companies that have it
+import {
+  nvidiaData,
+  nvidiaBuzzwords,
+  nvidiaCeoQuote,
+  nvidiaAchievements,
+  nvidiaCustomers,
+} from "@/data/enriched/nvda";
+
+// Type definitions for enriched data
+type Buzzword = { word: string; count: number; size: string };
+type CEOQuote = { quote: string; name: string; title: string };
+type Achievement = { icon: string; title: string; desc: string };
+type CustomerInfo = { top4Percentage: number; top4Label: string; risk: string };
+
+interface EnrichedData {
+  data: Partial<WrappedData>;
+  buzzwords: Buzzword[];
+  ceoQuote: CEOQuote;
+  achievements: Achievement[];
+  customers: CustomerInfo;
+}
+
+// Map of tickers to their enriched data
+const enrichedDataMap: Record<string, EnrichedData> = {
+  NVDA: {
+    data: nvidiaData,
+    buzzwords: nvidiaBuzzwords,
+    ceoQuote: nvidiaCeoQuote,
+    achievements: nvidiaAchievements,
+    customers: nvidiaCustomers,
+  },
+};
+
+function getEnrichedData(ticker: string): EnrichedData | null {
+  return enrichedDataMap[ticker] || null;
+}
 
 interface Props {
   params: Promise<{ ticker: string }>;
@@ -42,9 +81,33 @@ export default async function WrappedPage({ params, searchParams }: Props) {
   }
 
   // Build wrapped data server-side
-  const wrapped = await buildWrappedData(upperTicker, year);
+  const apiData = await buildWrappedData(upperTicker, year);
+  const enriched = getEnrichedData(upperTicker);
 
-  if (!wrapped) {
+  // Merge API data with enriched data (enriched takes priority for overlapping fields)
+  let wrapped: WrappedData;
+
+  if (enriched) {
+    // If we have enriched data, merge it with API data
+    wrapped = {
+      ...apiData,
+      ...enriched.data,
+      meta: {
+        ...apiData?.meta,
+        ...enriched.data.meta,
+      },
+      stock: {
+        ...apiData?.stock,
+        ...enriched.data.stock,
+      },
+      financials: {
+        ...apiData?.financials,
+        ...enriched.data.financials,
+      },
+    } as WrappedData;
+  } else if (apiData) {
+    wrapped = apiData;
+  } else {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center">
@@ -57,5 +120,13 @@ export default async function WrappedPage({ params, searchParams }: Props) {
     );
   }
 
-  return <WrappedClient data={wrapped} />;
+  return (
+    <WrappedClient
+      data={wrapped}
+      buzzwords={enriched?.buzzwords}
+      ceoQuote={enriched?.ceoQuote}
+      achievements={enriched?.achievements}
+      customers={enriched?.customers}
+    />
+  );
 }
