@@ -16,6 +16,27 @@ import {
   nvidiaAchievements,
   nvidiaCustomers,
 } from "@/data/enriched/nvda";
+import {
+  appleData,
+  appleBuzzwords,
+  appleCeoQuote,
+  appleAchievements,
+  appleCustomers,
+} from "@/data/enriched/aapl";
+import {
+  microsoftData,
+  microsoftBuzzwords,
+  microsoftCeoQuote,
+  microsoftAchievements,
+  microsoftCustomers,
+} from "@/data/enriched/msft";
+import {
+  teslaData,
+  teslaBuzzwords,
+  teslaCeoQuote,
+  teslaAchievements,
+  teslaCustomers,
+} from "@/data/enriched/tsla";
 
 // Type definitions for enriched data
 type Buzzword = { word: string; count: number; size: string };
@@ -39,6 +60,27 @@ const enrichedDataMap: Record<string, EnrichedData> = {
     ceoQuote: nvidiaCeoQuote,
     achievements: nvidiaAchievements,
     customers: nvidiaCustomers,
+  },
+  AAPL: {
+    data: appleData,
+    buzzwords: appleBuzzwords,
+    ceoQuote: appleCeoQuote,
+    achievements: appleAchievements,
+    customers: appleCustomers,
+  },
+  MSFT: {
+    data: microsoftData,
+    buzzwords: microsoftBuzzwords,
+    ceoQuote: microsoftCeoQuote,
+    achievements: microsoftAchievements,
+    customers: microsoftCustomers,
+  },
+  TSLA: {
+    data: teslaData,
+    buzzwords: teslaBuzzwords,
+    ceoQuote: teslaCeoQuote,
+    achievements: teslaAchievements,
+    customers: teslaCustomers,
   },
 };
 
