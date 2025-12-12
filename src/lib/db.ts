@@ -1,5 +1,7 @@
-// Database connection and queries using Vercel Postgres
-import { sql } from "@vercel/postgres";
+// Database connection and queries using Neon Postgres
+import { neon } from "@neondatabase/serverless";
+
+const sql = neon(process.env.DATABASE_URL!);
 
 // Initialize database tables
 export async function initDatabase() {
@@ -54,7 +56,7 @@ export async function getCompany(ticker: string) {
   const result = await sql`
     SELECT * FROM companies WHERE ticker = ${ticker.toUpperCase()}
   `;
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 // Upsert company
@@ -96,7 +98,7 @@ export async function getCachedWrapped(ticker: string, year: number, period: str
       AND period = ${period}
       AND expires_at > NOW()
   `;
-  return result.rows[0]?.data || null;
+  return result[0]?.data || null;
 }
 
 // Cache wrapped data (24 hour TTL by default)
@@ -134,7 +136,7 @@ export async function getCachedApiResponse(source: string, ticker: string, endpo
       AND endpoint = ${endpoint}
       AND expires_at > NOW()
   `;
-  return result.rows[0]?.response || null;
+  return result[0]?.response || null;
 }
 
 // Cache API response (1 hour for stock data, 24 hours for financials)
@@ -166,7 +168,7 @@ export async function cacheApiResponse(
 // Get all companies
 export async function getAllCompanies() {
   const result = await sql`SELECT * FROM companies ORDER BY ticker`;
-  return result.rows;
+  return result;
 }
 
 // Clear expired cache entries
