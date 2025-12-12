@@ -2,7 +2,7 @@
 // Returns WrappedData for a company
 
 import { NextRequest, NextResponse } from "next/server";
-import { buildWrappedData } from "@/lib/wrapped-builder";
+import { buildWrappedData } from "@/lib/wrapped-service";
 import { getCompany, getAllTickers } from "@/data/companies";
 
 export async function GET(
