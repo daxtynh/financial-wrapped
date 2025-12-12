@@ -326,12 +326,7 @@ export async function buildWrappedData(
     },
     segments: [], // Would need 10-K parsing
     geographic: [], // Would need 10-K parsing
-    quarterly: financials?.quarterlyRevenue?.map((q, i, arr) => ({
-      quarter: q.quarter,
-      revenue: q.value,
-      qoqGrowth: i > 0 && arr[i-1].value ? (q.value - arr[i-1].value) / arr[i-1].value : 0,
-      yoyGrowth: 0, // Would need previous year data
-    })) || [],
+    quarterly: [], // Quarterly data requires 10-Q parsing
     cashFlow: {
       operatingCashFlow: financials?.cashFlow || 0,
       freeCashFlow: financials?.freeCashFlow || 0,
