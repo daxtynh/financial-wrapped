@@ -126,7 +126,7 @@ function getFiscalYear(ticker: string, calendarYear: number): number {
   return calendarYear;
 }
 
-// Extract financial value for a specific year - picks latest filing
+// Extract financial value for a specific year - picks the correct period
 function getValueForYear(
   facts: SECCompanyFacts,
   concept: string,
@@ -142,14 +142,17 @@ function getValueForYear(
     const units = conceptData.units[unitType];
     if (!units) continue;
 
-    // Find all matches for this FY and form, then pick the latest filing
+    // Find all matches for this FY and form
     const matches = units.filter(
       (u) => u.fy === fiscalYear && u.form === form && u.fp === "FY"
     );
 
     if (matches.length > 0) {
-      // Sort by filed date descending and pick the first (most recent)
-      matches.sort((a, b) => b.filed.localeCompare(a.filed));
+      // 10-K contains comparative data for multiple years
+      // The actual fiscal year data has the latest end date
+      // e.g., FY2025 10-K has entries with end dates 2023, 2024, 2025
+      // We want the one ending in 2025 (the actual FY2025 data)
+      matches.sort((a, b) => b.end.localeCompare(a.end));
       return matches[0].val;
     }
   }
