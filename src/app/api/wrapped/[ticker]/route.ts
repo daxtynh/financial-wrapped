@@ -25,12 +25,13 @@ export async function GET(
     );
   }
 
-  // Get year from query params (default to 2024)
+  // Get query params
   const { searchParams } = new URL(request.url);
   const year = parseInt(searchParams.get("year") || "2024", 10);
+  const forceRefresh = searchParams.get("refresh") === "true";
 
   try {
-    const wrapped = await buildWrappedData(upperTicker, year);
+    const wrapped = await buildWrappedData(upperTicker, year, forceRefresh);
 
     if (!wrapped) {
       return NextResponse.json(

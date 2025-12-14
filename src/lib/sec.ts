@@ -41,15 +41,30 @@ export function getAnnualValue(
   if (!usGaap || !usGaap[metric]) return null;
 
   const units = usGaap[metric].units;
-  const unitType = Object.keys(units)[0]; // Usually "USD" or "shares"
-  const values = units[unitType];
 
-  // Find the value for the specified fiscal year
-  const match = values.find(
-    (v) => v.fy === fiscalYear && v.form === form && v.fp === "FY"
-  );
+  // Try different unit types - EPS uses "USD/shares", others use "USD"
+  const unitTypes = ["USD", "USD/shares", "pure", "shares"];
 
-  return match?.val ?? null;
+  for (const unitType of unitTypes) {
+    const values = units[unitType];
+    if (!values) continue;
+
+    // Find all matches for this FY and form
+    const matches = values.filter(
+      (v) => v.fy === fiscalYear && v.form === form && v.fp === "FY"
+    );
+
+    if (matches.length > 0) {
+      // 10-K contains comparative data for multiple years
+      // The actual fiscal year data has the latest end date
+      // e.g., FY2025 10-K has entries with end dates 2023, 2024, 2025
+      // We want the one ending in 2025 (the actual FY2025 data)
+      matches.sort((a, b) => b.end.localeCompare(a.end));
+      return matches[0].val;
+    }
+  }
+
+  return null;
 }
 
 // Get quarterly values for a metric
@@ -90,6 +105,28 @@ export interface KeyFinancials {
   rdExpense: number | null;
 }
 
+// Try multiple revenue field names (companies use different XBRL tags)
+function getRevenue(
+  facts: SECCompanyFacts,
+  fiscalYear: number
+): number | null {
+  const get = (metric: string) => getAnnualValue(facts, metric, fiscalYear);
+  const revenueFields = [
+    "Revenues",
+    "RevenueFromContractWithCustomerExcludingAssessedTax",
+    "SalesRevenueNet",
+    "RevenueFromContractWithCustomerIncludingAssessedTax",
+    "SalesRevenueGoodsNet",
+    "SalesRevenueServicesNet",
+  ];
+
+  for (const field of revenueFields) {
+    const value = get(field);
+    if (value && value > 0) return value;
+  }
+  return null;
+}
+
 export function extractKeyFinancials(
   facts: SECCompanyFacts,
   fiscalYear: number
@@ -97,18 +134,20 @@ export function extractKeyFinancials(
   const get = (metric: string) => getAnnualValue(facts, metric, fiscalYear);
   const getPrev = (metric: string) => getAnnualValue(facts, metric, fiscalYear - 1);
 
-  const revenue = get("Revenues") || get("RevenueFromContractWithCustomerExcludingAssessedTax");
-  const prevRevenue = getPrev("Revenues") || getPrev("RevenueFromContractWithCustomerExcludingAssessedTax");
+  const revenue = getRevenue(facts, fiscalYear);
+  const prevRevenue = getRevenue(facts, fiscalYear - 1);
   const grossProfit = get("GrossProfit");
-  const operatingIncome = get("OperatingIncomeLoss");
-  const netIncome = get("NetIncomeLoss");
-  const eps = get("EarningsPerShareDiluted");
-  const prevEps = getPrev("EarningsPerShareDiluted");
+  const operatingIncome = get("OperatingIncomeLoss") ||
+    get("IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest");
+  const netIncome = get("NetIncomeLoss") || get("ProfitLoss");
+  const eps = get("EarningsPerShareDiluted") || get("EarningsPerShareBasic");
+  const prevEps = getPrev("EarningsPerShareDiluted") || getPrev("EarningsPerShareBasic");
   const totalAssets = get("Assets");
   const totalDebt = get("LongTermDebt") || get("LongTermDebtNoncurrent");
   const cash = get("CashAndCashEquivalentsAtCarryingValue");
   const operatingCashFlow = get("NetCashProvidedByUsedInOperatingActivities");
-  const capex = get("PaymentsToAcquirePropertyPlantAndEquipment");
+  const capex = get("PaymentsToAcquirePropertyPlantAndEquipment") ||
+    get("PaymentsToAcquireProductiveAssets");
   const rdExpense = get("ResearchAndDevelopmentExpense");
 
   return {
